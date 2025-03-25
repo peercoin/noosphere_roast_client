@@ -1,0 +1,127 @@
+syntax = "proto3";
+package noosphere;
+
+message Bytes {
+  bytes data = 1;
+}
+
+message RepeatedBytes {
+  repeated bytes data = 1;
+}
+
+enum SignaturesResponseType {
+  SIGNATURES_RESPONSE_EMPTY = 0;
+  SIGNATURES_RESPONSE_NEW_ROUND = 1;
+  SIGNATURES_RESPONSE_COMPLETE = 2;
+}
+
+message SignaturesResponse {
+  SignaturesResponseType type = 1;
+  bytes data = 2;
+}
+
+message Empty {}
+
+service Noosphere {
+  rpc Login (LoginRequest) returns (Bytes) {}
+  rpc RespondToChallenge (SignedAuthChallenge) returns (Bytes) {}
+  rpc FetchEventStream (Bytes) returns (stream Events) {}
+  rpc ExtendSession (Bytes) returns (Bytes) {}
+  rpc RequestNewDkg (DkgRequest) returns (Empty) {}
+  rpc RejectDkg (DkgToReject) returns (Empty) {}
+  rpc SubmitDkgCommitment (DkgCommitment) returns (Empty) {}
+  rpc SubmitDkgRound2 (DkgRound2) returns (Empty) {}
+  rpc SendDkgAcks (DkgAcks) returns (Empty) {}
+  rpc RequestDkgAcks (DkgAckRequest) returns (RepeatedBytes) {}
+  rpc RequestSignatures (SignaturesRequest) returns (Empty) {}
+  rpc RejectSignaturesRequest (SignaturesRejection) returns (Empty) {}
+  rpc SubmitSignatureReplies (SignaturesReplies) returns (SignaturesResponse) {}
+}
+
+message LoginRequest {
+  bytes group_fingerprint = 1;
+  bytes participant_id = 2;
+  uint32 protocol_version = 3;
+}
+
+message SignedAuthChallenge {
+  bytes signature = 1;
+  bytes challenge = 2;
+}
+
+message DkgRequest {
+  bytes sid = 1;
+  bytes signed_details = 2;
+  bytes commitment = 3;
+}
+
+message DkgToReject {
+  bytes sid = 1;
+  string name = 2;
+}
+
+message DkgCommitment {
+  bytes sid = 1;
+  string name = 2;
+  bytes commitment = 3;
+}
+
+message DkgSecret {
+  bytes id = 1;
+  bytes secret = 2;
+}
+
+message DkgRound2 {
+  bytes sid = 1;
+  string name = 2;
+  bytes commitment_set_signature = 3;
+  repeated DkgSecret secrets = 4;
+}
+
+message DkgAcks {
+  bytes sid = 1;
+  repeated bytes acks = 2;
+}
+
+message DkgAckRequest {
+  bytes sid = 1;
+  repeated bytes requests = 2;
+}
+
+message SignaturesRequest {
+  bytes sid = 1;
+  repeated bytes keys = 2;
+  bytes signed_details = 3;
+  repeated bytes commitments = 4;
+}
+
+message SignaturesRejection {
+  bytes sid = 1;
+  bytes req_id = 2;
+}
+
+message SignaturesReplies {
+  bytes sid = 1;
+  bytes req_id = 2;
+  repeated bytes replies = 3;
+}
+
+enum EventType {
+  PARTICIPANT_STATUS_EVENT = 0;
+  NEW_DKG_EVENT = 1;
+  DKG_COMMITMENT_EVENT = 2;
+  DKG_REJECT_EVENT = 3;
+  DKG_ROUND2_SHARE_EVENT = 4;
+  DKG_ACK_EVENT = 5;
+  DKG_ACK_REQUEST_EVENT = 6;
+  SIG_REQ_EVENT = 7;
+  SIG_NEW_ROUNDS_EVENT = 8;
+  SIG_COMPLETE_EVENT = 9;
+  SIG_FAILURE_EVENT = 10;
+  KEEPALIVE_EVENT = 11;
+}
+
+message Events {
+  EventType type = 1;
+  bytes data = 2;
+}
