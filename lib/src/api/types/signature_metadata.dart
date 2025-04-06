@@ -3,6 +3,9 @@ import 'package:coinlib/coinlib.dart' as cl;
 import 'package:collection/collection.dart';
 import 'package:noosphere_roast_client/src/common/serial.dart';
 
+import 'signatures_request_details.dart';
+import 'single_signature_details.dart';
+
 /// Thrown when the metadata is invalid. Other specific exceptions may be thrown
 /// for invalid metadata.
 class InvalidMetaData implements Exception {
@@ -43,6 +46,8 @@ abstract interface class SignatureMetadata with cl.Writable {
     writer.writeUInt8(type);
   }
 
+  bool verifyRequiredSigs(List<SingleSignatureDetails> requiredSigs);
+
 }
 
 class EmptySignatureMetadata extends SignatureMetadata {
@@ -55,8 +60,20 @@ class EmptySignatureMetadata extends SignatureMetadata {
     _writeType(writer);
   }
 
+  @override
+  bool verifyRequiredSigs(List<SingleSignatureDetails> requiredSigs) => true;
+
 }
 
+/// Provides data of Taproot transaction inputs to be signed.
+///
+/// The consumer should only approve signatures requests for transactions that
+/// they approve and they should check that the inputs are solveable for the
+/// derived signing key.
+///
+/// The [SignaturesRequestDetails] class uses [verifyRequiredSigs] to verify
+/// that the [SingleSignatureDetails] messages correspond to the inputs being
+/// signed. The consumer should check that the key and MAST hash are correct.
 class TaprootTransactionSignatureMetadata extends SignatureMetadata {
 
   @override
@@ -211,6 +228,35 @@ class TaprootTransactionSignatureMetadata extends SignatureMetadata {
 
   }
 
+  /// Each element in [requiredSigs] must have a message that corresponds to
+  /// each element in [signDetails].
+  @override
+  bool verifyRequiredSigs(List<SingleSignatureDetails> requiredSigs) {
+
+    if (requiredSigs.length != signDetails.length) return false;
+
+    for (int i = 0; i < requiredSigs.length; i++) {
+
+      final details = signDetails[i];
+      final sig = requiredSigs[i];
+
+      if (details.isScript != (sig.signDetails.mastHash == null)) return false;
+
+      if (
+        cl.compareBytes(
+          cl.TaprootSignatureHasher(details).hash,
+          sig.signDetails.message,
+        ) != 0
+      ) {
+        return false;
+      }
+
+    }
+
+    return true;
+
+  }
+
 }
 
 class UnknownSignatureMetadata extends SignatureMetadata {
@@ -226,5 +272,8 @@ class UnknownSignatureMetadata extends SignatureMetadata {
     _writeType(writer);
     writer.writeSlice(data);
   }
+
+  @override
+  bool verifyRequiredSigs(List<SingleSignatureDetails> requiredSigs) => true;
 
 }

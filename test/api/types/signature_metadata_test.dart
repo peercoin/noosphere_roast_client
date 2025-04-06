@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:coinlib/coinlib.dart' as cl;
 import 'package:test/test.dart';
 import 'package:noosphere_roast_client/noosphere_roast_client.dart';
@@ -29,17 +28,19 @@ void main() {
 
   group("TaprootTransactionSignatureMetadata", () {
 
+    late final cl.ECPrivateKey key;
+    late final cl.Taproot tr;
     late final cl.Transaction tx;
     late final List<cl.Output> trOuts;
     late final cl.TapLeafChecksig apoLeaf;
-    late final cl.TaprootSignDetails apoDetails, apoasDetails;
+    late final cl.TaprootSignDetails keyDetails, apoDetails, apoasDetails;
     setUpAll(() async {
 
       await loadFrosty();
 
-      final key = getPrivkey(0);
+      key = getPrivkey(0);
       apoLeaf = cl.TapLeafChecksig.apo(key.pubkey);
-      final tr = cl.Taproot(internalKey: key.pubkey, mast: apoLeaf);
+      tr = cl.Taproot(internalKey: key.pubkey, mast: apoLeaf);
 
       trOuts = List.generate(
         4,
@@ -48,8 +49,6 @@ void main() {
           cl.P2TR.fromTaproot(tr),
         ),
       );
-
-      final dummyHash = Uint8List(32)..last = 1;
 
       tx = cl.Transaction(
         inputs: [
@@ -67,6 +66,9 @@ void main() {
         outputs: [trOuts.first],
       );
 
+      keyDetails = cl.TaprootKeySignDetails(
+        tx: tx, inputN: 0, prevOuts: trOuts,
+      );
       apoasDetails = cl.TaprootScriptSignDetails(
         tx: tx,
         inputN: 2,
@@ -105,11 +107,7 @@ void main() {
 
       for (final signDetails in [
         // Contains SIGHASH_DEFAULT with all prevouts
-        [
-          cl.TaprootKeySignDetails(tx: tx, inputN: 0, prevOuts: trOuts),
-          apoasDetails,
-          apoDetails,
-        ],
+        [keyDetails, apoasDetails, apoDetails],
         // Contains only AOCP, APO and APOAS
         [
           apoasDetails,
@@ -176,7 +174,7 @@ void main() {
       // Duplicate input N
       expectInvalid(
         [
-          cl.TaprootKeySignDetails(tx: tx, inputN: 0, prevOuts: trOuts),
+          keyDetails,
           cl.TaprootKeySignDetails(
             tx: tx,
             inputN: 0,
@@ -228,6 +226,61 @@ void main() {
 
       // Missing specific output for APO
       expectInvalid("${typeAndTxHex}0000${out3Hex}0001000100410000ffffffff");
+
+    });
+
+    test(".verifyRequiredSigs", () {
+
+      final metadata = TaprootTransactionSignatureMetadata(
+        transaction: tx,
+        signDetails: [keyDetails, apoDetails],
+      );
+
+      SingleSignatureDetails getDetails(
+        SignDetails signDetails,
+      ) => SingleSignatureDetails(
+        signDetails: signDetails,
+        groupKey: cl.ECCompressedPublicKey.fromPubkey(key.pubkey),
+        hdDerivation: [],
+      );
+
+      final keyPathHash = cl.TaprootSignatureHasher(keyDetails).hash;
+      final scriptPathHash = cl.TaprootSignatureHasher(apoDetails).hash;
+
+      final keyPathDetails = getDetails(
+        SignDetails.keySpend(message: keyPathHash, mastHash: tr.mast!.hash),
+      );
+
+      final scriptPathDetails = getDetails(
+        SignDetails.scriptSpend(message: scriptPathHash),
+      );
+
+      expect(
+        metadata.verifyRequiredSigs([keyPathDetails, scriptPathDetails]),
+        true,
+      );
+
+      for (final bad in [
+        // Wrong size
+        [keyPathDetails],
+        // Key details given as script-spend
+        [
+          getDetails(SignDetails.scriptSpend(message: keyPathHash)),
+          scriptPathDetails,
+        ],
+        // Script details given as key-spend
+        [
+          keyPathDetails,
+          getDetails(SignDetails.keySpend(message: scriptPathHash)),
+        ],
+        // Wrong hash
+        [
+          keyPathDetails,
+          getDetails(SignDetails.scriptSpend(message: keyPathHash)),
+        ],
+      ]) {
+        expect(metadata.verifyRequiredSigs(bad), false);
+      }
 
     });
 

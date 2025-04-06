@@ -39,3 +39,4 @@ ClientConfig getClientConfig(int i) => ClientConfig(
 
 final expiryBytes = [0, 0, 0xdc, 0xc2, 0x08, 0xb2, 0x1e, 0];
 final expiryTimestamp = 8640000000000000;
+final dummyHash = Uint8List(32)..last = 1;

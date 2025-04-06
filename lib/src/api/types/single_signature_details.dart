@@ -4,6 +4,9 @@ import 'package:collection/collection.dart';
 import 'package:frosty/frosty.dart';
 
 /// Details for a single signature in a signatures request.
+///
+/// Consumers should determine if they desire to make these signatures for the
+/// given details.
 class SingleSignatureDetails with cl.Writable {
 
   /// The message hash to be signed and the MAST tweak.

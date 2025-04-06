@@ -66,6 +66,9 @@ class SignaturesRequestDetails with cl.Writable, Signable {
     if (!allowNegativeExpiry) {
       expiry.requireNotExpired();
     }
+    if (!this.metadata.verifyRequiredSigs(requiredSigs)) {
+      throw InvalidMetaData("Required signatures not valid for metadata");
+    }
   }
 
   SignaturesRequestDetails({
