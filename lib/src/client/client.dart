@@ -253,7 +253,6 @@ class Client {
     expiry: details.expiry.clampUpperTTL(config.maxDkgRequestTTL),
   );
 
-  bool _dkgExists(String name) => _state.nameToDkg.containsKey(name);
   bool _sigReqExists(SignaturesRequestId id)
     => _state.sigRequests.containsKey(id);
 
@@ -269,7 +268,7 @@ class Client {
 
     await dkg?.synchronized(() async {
       // Check again if removed before start of async critical section
-      if (!_dkgExists(name)) return;
+      if (!dkgExists(name)) return;
       await criticalSection(dkg);
     });
 
@@ -1250,6 +1249,11 @@ class Client {
 
   }
 
+  /// Request Distributed Key Generation for a proposed key with the given
+  /// [details]. The DKG name must not be the same as any other in-progress DKG.
+  /// [dkgExists] can be used to determine if a name already exists.
+  ///
+  /// The client will be assumed to have accepted the DKG.
   Future<void> requestDkg(NewDkgDetails details) async {
 
     // Check expiry
@@ -1266,7 +1270,7 @@ class Client {
     await _dkgReqLock.synchronized(() async {
 
       // Check if exists
-      if (_dkgExists(details.name)) {
+      if (dkgExists(details.name)) {
         throw ArgumentError.value(details.name, "details.name", "exists");
       }
 
@@ -1419,6 +1423,9 @@ class Client {
     await _eventSubscription.cancel();
     await _eventController.close();
   }
+
+  /// Determines if the in-progress DKG by [name] already exists.
+  bool dkgExists(String name) => _state.nameToDkg.containsKey(name);
 
   /// Participants that are online according to the server
   Set<Identifier> get onlineParticipants => _state.onlineParticipants;
