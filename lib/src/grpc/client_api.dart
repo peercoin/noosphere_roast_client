@@ -47,7 +47,7 @@ class GrpcClientApi implements ApiRequestInterface {
     }
   }
 
-  final _options = grpc.CallOptions(timeout: Duration(seconds: 3));
+  final _options = grpc.CallOptions(timeout: Duration(seconds: 10));
 
   @override
   Future<ExpirableAuthChallengeResponse> login({
