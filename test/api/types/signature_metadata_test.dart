@@ -50,14 +50,16 @@ void main() {
         ),
       );
 
+      final apoInput = cl.TaprootSingleScriptSigInput.anyPrevOut(
+        taproot: tr,
+        leaf: apoLeaf,
+      );
+
       tx = cl.Transaction(
         inputs: [
           cl.TaprootKeyInput(prevOut: cl.OutPoint(dummyHash, 0)),
-          cl.TaprootSingleScriptSigInput.anyPrevOut(
-            taproot: tr,
-            leaf: apoLeaf,
-          ),
-          cl.TaprootSingleScriptSigInput.anyPrevOutAnyScript(),
+          apoInput,
+          apoInput,
           cl.P2PKHInput(
             prevOut: cl.OutPoint(dummyHash, 4),
             publicKey: key.pubkey,
@@ -130,6 +132,8 @@ void main() {
 
         final actual = SignatureMetadata.fromBytes(metadata.toBytes())
           as TaprootTransactionSignatureMetadata;
+
+        expect(actual.toHex(), metadata.toHex());
         expect(actual.transaction.toHex(), tx.toHex());
 
         // All sign details share the same tx object
@@ -197,6 +201,9 @@ void main() {
       // Input not TR
       expectInvalid(
         [cl.TaprootKeySignDetails(tx: tx, inputN: 3, prevOuts: trOuts)],
+      );
+      expectInvalid(
+        [cl.TaprootScriptSignDetails(tx: tx, inputN: 3, prevOuts: trOuts)],
       );
 
     });

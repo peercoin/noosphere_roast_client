@@ -103,12 +103,18 @@ class TaprootTransactionSignatureMetadata extends SignatureMetadata {
     }
 
     for (final details in signDetails) {
-      final isKeyPath
-        = transaction.inputs[details.inputN] is cl.TaprootKeyInput;
-      final isKeyDetails = details is cl.TaprootKeySignDetails;
-      if (isKeyPath != isKeyDetails) {
+
+      final inN = details.inputN;
+      final input = transaction.inputs[inN];
+
+      if (input is! cl.TaprootInput) {
+        throw InvalidMetaData("input $inN is not a taproot type");
+      }
+
+      if (input is cl.TaprootKeyInput != details is cl.TaprootKeySignDetails) {
         throw InvalidMetaData("input type doesn't correspond to sign details");
       }
+
     }
 
   }
@@ -145,19 +151,27 @@ class TaprootTransactionSignatureMetadata extends SignatureMetadata {
       final leafHash = reader.readBool() ? reader.readSlice(32) : null;
       final codeSeperatorPos = reader.readUInt32();
 
-      final inPrevOuts = hashType.allInputs
+      final inPrevOuts = (
+        hashType.allInputs
         ? prevOuts
-        : (hashType.anyPrevOutAnyScript ? <cl.Output>[] : [prevOuts[inputN]]);
+        : (hashType.anyPrevOutAnyScript ? <cl.Output>[] : [prevOuts[inputN]])
+      ).nonNulls.toList();
 
       signDetails.add(
-        cl.TaprootSignDetails(
+        isScript
+        ? cl.TaprootScriptSignDetails(
           tx: transaction,
           inputN: inputN,
-          prevOuts: inPrevOuts.nonNulls.toList(),
-          isScript: isScript,
-          hashType: hashType,
+          prevOuts: inPrevOuts,
           leafHash: leafHash,
           codeSeperatorPos: codeSeperatorPos,
+          hashType: hashType,
+        )
+        : cl.TaprootKeySignDetails(
+          tx: transaction,
+          inputN: inputN,
+          prevOuts: inPrevOuts,
+          hashType: hashType,
         ),
       );
 
