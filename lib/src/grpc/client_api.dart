@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:coinlib/coinlib.dart' as cl;
 import 'package:grpc/grpc.dart' as grpc;
@@ -23,6 +25,10 @@ Uint8List _bytes(List<int> li) => Uint8List.fromList(li);
 /// Provides the client API via a connection to a gRPC server. A
 /// [grpc.GrpcError] may be thrown if there is an connection issue with the
 /// server.
+///
+/// The underlying gRPC library is buggy. An ungraceful disconnect can cause
+/// async code to not complete. This may lead to small memory leaks. Programs
+/// should be closed using [exit] to avoid hanging.
 class GrpcClientApi implements ApiRequestInterface {
 
   static const currentProtocolVersion = 1;
@@ -41,6 +47,8 @@ class GrpcClientApi implements ApiRequestInterface {
     }
   }
 
+  final _options = grpc.CallOptions(timeout: Duration(seconds: 3));
+
   @override
   Future<ExpirableAuthChallengeResponse> login({
     required Uint8List groupFingerprint,
@@ -48,32 +56,56 @@ class GrpcClientApi implements ApiRequestInterface {
     int protocolVersion = currentProtocolVersion,
   }) => _handleExceptions(() async {
 
-    final resp = await _grpc.login(
-      pb.LoginRequest(
-        groupFingerprint: groupFingerprint,
-        participantId: participantId.toBytes(),
-        protocolVersion: protocolVersion,
-      ),
+    // Run the login method in a different zone and obtain the error whilst
+    // waiting for a response if there is any.
+    // The login method will initiate a connection and async code through gRPC.
+    // gRPC is buggy and might throw an error from async code. These errors need
+    // to be ignored to avoid unhandled errors crashing a program.
+
+    Object caughtError = Error();
+
+    final resp = await runZonedGuarded(
+      () async {
+        try {
+          return await _grpc.login(
+            pb.LoginRequest(
+              groupFingerprint: groupFingerprint,
+              participantId: participantId.toBytes(),
+              protocolVersion: protocolVersion,
+            ),
+            options: _options,
+          );
+        } catch (e) {
+          caughtError = e;
+        }
+        return null;
+      },
+      // Simply ignore unhandled errors from gRPC
+      (_, __) {},
     );
 
+    if (resp == null) throw caughtError;
     return ExpirableAuthChallengeResponse.fromBytes(_bytes(resp.data));
 
   });
 
+  /// The stream returned by this method will pass gRPC errors.
   @override
   Future<LoginCompleteResponse> respondToChallenge(
     Signed<AuthChallenge> signedChallenge,
-  ) async {
+  ) => _handleExceptions(() async {
 
     final resp = await _grpc.respondToChallenge(
       pb.SignedAuthChallenge(
         signature: signedChallenge.signature.data,
         challenge: signedChallenge.obj.n,
       ),
+      options: _options,
     );
 
     // Session ID bytes are first 16 bytes. Use this to obtain stream via
     // separate gRPC method
+    // No options with deadline as events could take a long time to be received
     final stream = _grpc.fetchEventStream(
       pb.Bytes(data: resp.data.sublist(0, 16)),
     );
@@ -113,11 +145,14 @@ class GrpcClientApi implements ApiRequestInterface {
 
     return LoginCompleteResponse.fromBytes(_bytes(resp.data), newStream);
 
-  }
+  });
 
   @override
   Future<Expiry> extendSession(SessionID sid) => _handleExceptions(() async {
-    final resp = await _grpc.extendSession(pb.Bytes(data: sid.n));
+    final resp = await _grpc.extendSession(
+      pb.Bytes(data: sid.n),
+      options: _options,
+    );
     return Expiry.fromBytes(_bytes(resp.data));
   });
 
@@ -133,6 +168,7 @@ class GrpcClientApi implements ApiRequestInterface {
         signedDetails: signedDetails.toBytes(),
         commitment: commitment.toBytes(),
       ),
+      options: _options,
     ),
   );
 
@@ -141,7 +177,10 @@ class GrpcClientApi implements ApiRequestInterface {
     required SessionID sid,
     required String name,
   }) => _handleExceptions(
-    () => _grpc.rejectDkg(pb.DkgToReject(sid: sid.n, name: name)),
+    () => _grpc.rejectDkg(
+      pb.DkgToReject(sid: sid.n, name: name),
+      options: _options,
+    ),
   );
 
   @override
@@ -156,6 +195,7 @@ class GrpcClientApi implements ApiRequestInterface {
         name: name,
         commitment: commitment.toBytes(),
       ),
+      options: _options,
     ),
   );
 
@@ -178,6 +218,7 @@ class GrpcClientApi implements ApiRequestInterface {
           ),
         ),
       ),
+      options: _options,
     ),
   );
 
@@ -191,6 +232,7 @@ class GrpcClientApi implements ApiRequestInterface {
         sid: sid.n,
         acks: acks.map((ack) => ack.toBytes()),
       ),
+      options: _options,
     ),
   );
 
@@ -205,6 +247,7 @@ class GrpcClientApi implements ApiRequestInterface {
         sid: sid.n,
         requests: requests.map((req) => req.toBytes()),
       ),
+      options: _options,
     );
 
     return resp.data.map(
@@ -227,6 +270,7 @@ class GrpcClientApi implements ApiRequestInterface {
         signedDetails: signedDetails.toBytes(),
         commitments: commitments.map((commitment) => commitment.toBytes()),
       ),
+      options: _options,
     ),
   );
 
@@ -240,6 +284,7 @@ class GrpcClientApi implements ApiRequestInterface {
         sid: sid.n,
         reqId: reqId.toBytes(),
       ),
+      options: _options,
     ),
   );
 
@@ -256,6 +301,7 @@ class GrpcClientApi implements ApiRequestInterface {
         reqId: reqId.toBytes(),
         replies: replies.map((reply) => reply.toBytes()),
       ),
+      options: _options,
     );
 
     return switch (resp.type) {

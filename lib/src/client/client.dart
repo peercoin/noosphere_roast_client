@@ -82,10 +82,12 @@ class ServerMisbehaviour implements Exception {
 }
 
 /// A high-level abstraction of a FROST participant client with the server API.
+/// Use the [login] factory to create a client.
+///
 /// [ClientEvent]s are passed to the [events] stream.
 ///
-/// Errors are also passed to the [events] stream. The Client may be unusable
-/// after an error, so should be destroyed and remade via a new login.
+/// An error may also passed to the [events] stream. The Client will disconnect
+/// upon an error and [login] must be called again.
 class Client {
 
   // Reasonable wait before extending session to prevent excessive requests
@@ -103,6 +105,7 @@ class Client {
   /// An asynchronous function to get the private key to allow for secure
   /// ephemeral access as needed.
   final GetPrivateKey getPrivateKey;
+  final void Function() onDisconnect;
 
   late final ClientState _state;
   final _eventController = StreamController<ClientEvent>();
@@ -206,7 +209,7 @@ class Client {
     required Expiry sessionExpiry,
     required Stream<Event> events,
     required this.getPrivateKey,
-    required void Function() onDisconnect,
+    required this.onDisconnect,
   }) : _store = store {
 
     _state = ClientState(
@@ -220,10 +223,8 @@ class Client {
 
     _eventSubscription = events.listen(
       (ev) => _eventFuture = _handleEvent(ev),
-      onDone: () async {
-        await logout();
-        onDisconnect();
-      },
+      onDone: () => _disconnect(),
+      onError: (Object e) => _sendError(e),
     );
 
   }
@@ -302,8 +303,16 @@ class Client {
     if (id == config.id) throw ServerMisbehaviour.wrongParticipant();
   }
 
+  void _disconnect() async {
+    await logout();
+    onDisconnect();
+  }
   void _sendEvent(ClientEvent ev) => _eventController.add(ev);
-  void _sendError(Object err) => _eventController.addError(err);
+  void _sendError(Object err) {
+    if (_eventController.isClosed) return;
+    _eventController.addError(err);
+    _disconnect();
+  }
 
   DkgPart1 _getDkgPart1(int threshold) => DkgPart1(
     identifier: config.id,
@@ -1081,11 +1090,11 @@ class Client {
   Future<void> _extendSession() async {
     try {
       _state.expiry = await api.extendSession(_state.sessionID);
+      _setSessionExtendTimer();
     } catch(e) {
       // Emit error
       _sendError(e);
     }
-    _setSessionExtendTimer();
   }
 
   void _setSessionExtendTimer() {
@@ -1464,12 +1473,14 @@ class Client {
   List<SignaturesRequest> get signaturesRequests
     => _state.sigRequests.values.map(_sigsStateToObj).toList();
 
-  /// A stream of events to keep track of state changes that occur
-  /// This can also receive errors from underlying received server events
+  /// A stream of events to keep track of state changes that occur. If an error
+  /// is provided on this stream, the stream will immediately close afterwards.
+  ///
   /// If there is an error, the client may have lost connection to the server,
-  /// or the server may be malfunctioning. The class will not re-establish a
-  /// connection automatically and thus a new login can be attempted whereby all
-  /// DKG requests will need to be re-accepted.
+  /// or the server may be malfunctioning. When an error is received, the client
+  /// will be disconnected and [onDisconnect] shall be called. No more events or
+  /// errors shall be given and this stream will close. A new login should be
+  /// attempted whereby all DKG requests will need to be re-accepted.
   ///
   /// This stream should be listened to immediately and continuously from login
   /// to prevent a large number of events being buffered.
