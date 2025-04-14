@@ -320,14 +320,19 @@ class Client {
     n: config.groupN,
   );
 
-  void _rejectBadDkg({
+  Future<void> _rejectDkgWithoutSync(String name) async {
+    await api.rejectDkg(sid: _state.sessionID, name: name);
+    _state.nameToDkg.remove(name);
+  }
+
+  Future<void> _rejectBadDkg({
     required NewDkgDetails details,
     required Identifier? culprit,
     required DkgFault fault,
   }) async {
 
     // Send rejection to server and remove from state
-    await rejectDkg(details.name);
+    await _rejectDkgWithoutSync(details.name);
 
     // Send event of the rejection
     _sendEvent(
@@ -358,7 +363,7 @@ class Client {
         commitments: commitmentSet,
       );
     } on InvalidPart2ProofOfKnowledge catch(e) {
-      _rejectBadDkg(
+      await _rejectBadDkg(
         details: dkg.details,
         culprit: e.culprit,
         fault: DkgFault.proofOfKnowledge,
@@ -407,7 +412,7 @@ class Client {
         receivedShares: round2.secretShares,
       ).participantInfo;
     } on InvalidPart3 {
-      _rejectBadDkg(
+      await _rejectBadDkg(
         details: dkg.details,
         // Frosty does not provide participant with invalid secret
         culprit: null,
@@ -966,7 +971,7 @@ class Client {
 
               if (secret == null) {
                 // Cannot decrypt share so reject DKG
-                _rejectBadDkg(
+                await _rejectBadDkg(
                   details: dkg.details,
                   culprit: ev.sender,
                   fault: DkgFault.secretCiphertext,
@@ -1311,11 +1316,7 @@ class Client {
   }
 
   Future<void> rejectDkg(String name) => _runDkgSyncIfExists(
-    name,
-    (_) async {
-      await api.rejectDkg(sid: _state.sessionID, name: name);
-      _state.nameToDkg.remove(name);
-    }
+    name, (_) => _rejectDkgWithoutSync(name),
   );
 
   Future<void> acceptDkg(String name) => _runDkgSyncIfExists(
