@@ -1,6 +1,6 @@
 name: noosphere_roast_client
 description: A client library for ROAST threshold signatures
-version: 1.1.0
+version: 2.0.0
 repository: https://github.com/peercoin/noosphere_roast_client
 
 environment:
@@ -8,7 +8,7 @@ environment:
 
 dependencies:
   coinlib: ^4.0.0
-  frosty: ^1.1.0
+  frosty: ^2.0.0
   synchronized: ^3.1.0+1
   collection: ^1.17.1
   grpc: ^4.0.1

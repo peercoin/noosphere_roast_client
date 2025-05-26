@@ -1451,7 +1451,7 @@ class Client {
   /// Status of DKGs that the client has accepted
   List<DkgInProgress> get acceptedDkgs => _getDkgProgress(true);
 
-  /// Obtains all keys, maping the group key to the full details
+  /// Obtains all keys, mapping the group key to the full details
   Map<cl.ECCompressedPublicKey, FrostKeyWithDetails> get keys => _store.keys;
 
   SignaturesRequest _sigsStateToObj(ClientSigsState sigsState)

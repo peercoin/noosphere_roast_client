@@ -1,3 +1,7 @@
+## 2.0.0
+
+Update to frosty 2.0.0
+
 ## 1.1.0
 
 - Add TaprootTransactionSignatureMetadata to share details for signing Taproot
