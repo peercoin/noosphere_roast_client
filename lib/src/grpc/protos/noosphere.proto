@@ -36,6 +36,7 @@ service Noosphere {
   rpc RequestSignatures (SignaturesRequest) returns (Empty) {}
   rpc RejectSignaturesRequest (SignaturesRejection) returns (Empty) {}
   rpc SubmitSignatureReplies (SignaturesReplies) returns (SignaturesResponse) {}
+  rpc ShareSecretShare (SecretShare) returns (Empty) {}
 }
 
 message LoginRequest {
@@ -106,6 +107,17 @@ message SignaturesReplies {
   repeated bytes replies = 3;
 }
 
+message EncryptedSecret {
+  bytes id = 1;
+  bytes share = 2;
+}
+
+message SecretShare {
+  bytes sid = 1;
+  bytes group_key = 2;
+  repeated EncryptedSecret secrets = 3;
+}
+
 enum EventType {
   PARTICIPANT_STATUS_EVENT = 0;
   NEW_DKG_EVENT = 1;
@@ -119,6 +131,7 @@ enum EventType {
   SIG_COMPLETE_EVENT = 9;
   SIG_FAILURE_EVENT = 10;
   KEEPALIVE_EVENT = 11;
+  SECRET_SHARE_EVENT = 12;
 }
 
 message Events {

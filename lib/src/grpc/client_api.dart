@@ -11,6 +11,7 @@ import 'package:noosphere_roast_client/src/api/responses/login_complete.dart';
 import 'package:noosphere_roast_client/src/api/responses/signatures.dart';
 import 'package:noosphere_roast_client/src/api/types/dkg_ack_request.dart';
 import 'package:noosphere_roast_client/src/api/types/dkg_encrypted_secret.dart';
+import 'package:noosphere_roast_client/src/api/types/encrypted_key_share.dart';
 import 'package:noosphere_roast_client/src/api/types/expiry.dart';
 import 'package:noosphere_roast_client/src/api/types/new_dkg_details.dart';
 import 'package:noosphere_roast_client/src/api/types/onetime_numbers.dart';
@@ -137,6 +138,8 @@ class GrpcClientApi implements ApiRequestInterface {
             => SignaturesCompleteEvent.fromBytes(bytes),
           pb.EventType.SIG_FAILURE_EVENT
             => SignaturesFailureEvent.fromBytes(bytes),
+          pb.EventType.SECRET_SHARE_EVENT
+            => SecretShareEvent.fromBytes(bytes),
           pb.EventType.KEEPALIVE_EVENT => KeepaliveEvent(),
           _ => throw UnimplementedError(),
         };
@@ -313,5 +316,25 @@ class GrpcClientApi implements ApiRequestInterface {
     };
 
   });
+
+  @override
+  Future<void> shareSecretShare({
+    required SessionID sid,
+    required cl.ECCompressedPublicKey groupKey,
+    required Map<Identifier, EncryptedKeyShare> encryptedSecrets,
+  }) => _handleExceptions(
+    () => _grpc.shareSecretShare(
+      pb.SecretShare(
+        sid: sid.n,
+        groupKey: groupKey.data,
+        secrets: encryptedSecrets.entries.map(
+          (entry) => pb.EncryptedSecret(
+            id: entry.key.toBytes(),
+            share: entry.value.ciphertext.toBytes(),
+          ),
+        ).toList(),
+      ),
+    ),
+  );
 
 }

@@ -7,6 +7,7 @@ import 'responses/expirable_auth_challenge.dart';
 import 'responses/signatures.dart';
 import 'types/dkg_ack_request.dart';
 import 'types/dkg_encrypted_secret.dart';
+import 'types/encrypted_key_share.dart';
 import 'types/expiry.dart';
 import 'types/new_dkg_details.dart';
 import 'types/onetime_numbers.dart';
@@ -63,6 +64,7 @@ class InvalidRequest implements Exception {
     : this("Received share that wasn't solicited");
   InvalidRequest.missingShare() : this("Missing share for ROAST round");
   InvalidRequest.invalidShare() : this("Signature share is invalid");
+  InvalidRequest.invalidKeyShareMap() : this("Encrypted key shares are invalid");
   @override
   String toString() => message;
 }
@@ -192,6 +194,19 @@ abstract interface class ApiRequestInterface {
     required SessionID sid,
     required SignaturesRequestId reqId,
     required List<SignatureReply> replies,
+  });
+
+  /// Provides the participant's secret shares for a FROST key given by the
+  /// public [groupKey]. The participant can share the secret to any other
+  /// participants via the [encryptedSecrets] map which must be encrypted by
+  /// end-to-end encryption using [EncryptedKeyShare].
+  ///
+  /// Logged in recipients will receive a [SecretShareEvent] immediately.
+  /// Otherwise, the server shall send the event when the receipients login.
+  Future<void> shareSecretShare({
+    required SessionID sid,
+    required cl.ECCompressedPublicKey groupKey,
+    required Map<Identifier, EncryptedKeyShare> encryptedSecrets,
   });
 
 }

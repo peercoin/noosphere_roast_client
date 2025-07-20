@@ -45,6 +45,7 @@ const EventType$json = {
     {'1': 'SIG_COMPLETE_EVENT', '2': 9},
     {'1': 'SIG_FAILURE_EVENT', '2': 10},
     {'1': 'KEEPALIVE_EVENT', '2': 11},
+    {'1': 'SECRET_SHARE_EVENT', '2': 12},
   ],
 };
 
@@ -55,7 +56,7 @@ final $typed_data.Uint8List eventTypeDescriptor = $convert.base64Decode(
     'FkRLR19ST1VORDJfU0hBUkVfRVZFTlQQBBIRCg1ES0dfQUNLX0VWRU5UEAUSGQoVREtHX0FDS1'
     '9SRVFVRVNUX0VWRU5UEAYSEQoNU0lHX1JFUV9FVkVOVBAHEhgKFFNJR19ORVdfUk9VTkRTX0VW'
     'RU5UEAgSFgoSU0lHX0NPTVBMRVRFX0VWRU5UEAkSFQoRU0lHX0ZBSUxVUkVfRVZFTlQQChITCg'
-    '9LRUVQQUxJVkVfRVZFTlQQCw==');
+    '9LRUVQQUxJVkVfRVZFTlQQCxIWChJTRUNSRVRfU0hBUkVfRVZFTlQQDA==');
 
 @$core.Deprecated('Use bytesDescriptor instead')
 const Bytes$json = {
@@ -279,6 +280,36 @@ const SignaturesReplies$json = {
 final $typed_data.Uint8List signaturesRepliesDescriptor = $convert.base64Decode(
     'ChFTaWduYXR1cmVzUmVwbGllcxIQCgNzaWQYASABKAxSA3NpZBIVCgZyZXFfaWQYAiABKAxSBX'
     'JlcUlkEhgKB3JlcGxpZXMYAyADKAxSB3JlcGxpZXM=');
+
+@$core.Deprecated('Use encryptedSecretDescriptor instead')
+const EncryptedSecret$json = {
+  '1': 'EncryptedSecret',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 12, '10': 'id'},
+    {'1': 'share', '3': 2, '4': 1, '5': 12, '10': 'share'},
+  ],
+};
+
+/// Descriptor for `EncryptedSecret`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List encryptedSecretDescriptor = $convert.base64Decode(
+    'Cg9FbmNyeXB0ZWRTZWNyZXQSDgoCaWQYASABKAxSAmlkEhQKBXNoYXJlGAIgASgMUgVzaGFyZQ'
+    '==');
+
+@$core.Deprecated('Use secretShareDescriptor instead')
+const SecretShare$json = {
+  '1': 'SecretShare',
+  '2': [
+    {'1': 'sid', '3': 1, '4': 1, '5': 12, '10': 'sid'},
+    {'1': 'group_key', '3': 2, '4': 1, '5': 12, '10': 'groupKey'},
+    {'1': 'secrets', '3': 3, '4': 3, '5': 11, '6': '.noosphere.EncryptedSecret', '10': 'secrets'},
+  ],
+};
+
+/// Descriptor for `SecretShare`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List secretShareDescriptor = $convert.base64Decode(
+    'CgtTZWNyZXRTaGFyZRIQCgNzaWQYASABKAxSA3NpZBIbCglncm91cF9rZXkYAiABKAxSCGdyb3'
+    'VwS2V5EjQKB3NlY3JldHMYAyADKAsyGi5ub29zcGhlcmUuRW5jcnlwdGVkU2VjcmV0UgdzZWNy'
+    'ZXRz');
 
 @$core.Deprecated('Use eventsDescriptor instead')
 const Events$json = {

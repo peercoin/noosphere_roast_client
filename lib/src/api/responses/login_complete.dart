@@ -67,6 +67,9 @@ class LoginCompleteResponse with cl.Writable implements Expirable {
   /// Completed signatures that the participant may not have received whilst
   /// logged out
   final List<CompletedSignaturesRequest> completedSigs;
+  /// Secret key shares provided to the participant which were not previously
+  /// acknowledged.
+  final List<SecretShareEvent> secretShares;
   /// A stream of events of type [Event] that the client should listen to for
   /// this session. The client must listen to this stream as soon as it is
   /// provided to ensure no events are missed.
@@ -80,6 +83,7 @@ class LoginCompleteResponse with cl.Writable implements Expirable {
     required this.sigRequests,
     required this.sigRounds,
     required this.completedSigs,
+    required this.secretShares,
     required this.events,
   });
 
@@ -100,6 +104,9 @@ class LoginCompleteResponse with cl.Writable implements Expirable {
       completedSigs: reader.readWritableVector(
         (bytes) => CompletedSignaturesRequest.fromBytes(bytes),
       ),
+      secretShares: reader.readWritableVector(
+        (bytes) => SecretShareEvent.fromBytes(bytes),
+      ),
       events: events,
     );
 
@@ -113,7 +120,11 @@ class LoginCompleteResponse with cl.Writable implements Expirable {
     expiry.write(writer);
     writer.writeIdentifierVector(onlineParticipants);
 
-    for (final evList in [newDkgs, sigRequests, sigRounds, completedSigs]) {
+    for (
+      final evList in [
+        newDkgs, sigRequests, sigRounds, completedSigs, secretShares,
+      ]
+    ) {
       writer.writeWritableVector(evList);
     }
 

@@ -7,6 +7,7 @@ export "api/types/bytes_mappable.dart";
 export "api/types/dkg_ack.dart";
 export "api/types/dkg_ack_request.dart";
 export "api/types/dkg_encrypted_secret.dart";
+export "api/types/encrypted_key_share.dart";
 export "api/types/expirable.dart";
 export "api/types/expiry.dart";
 export "api/types/new_dkg_details.dart";

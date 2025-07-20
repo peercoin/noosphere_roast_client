@@ -1051,6 +1051,142 @@ class SignaturesReplies extends $pb.GeneratedMessage {
   $core.List<$core.List<$core.int>> get replies => $_getList(2);
 }
 
+class EncryptedSecret extends $pb.GeneratedMessage {
+  factory EncryptedSecret({
+    $core.List<$core.int>? id,
+    $core.List<$core.int>? share,
+  }) {
+    final $result = create();
+    if (id != null) {
+      $result.id = id;
+    }
+    if (share != null) {
+      $result.share = share;
+    }
+    return $result;
+  }
+  EncryptedSecret._() : super();
+  factory EncryptedSecret.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory EncryptedSecret.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'EncryptedSecret', package: const $pb.PackageName(_omitMessageNames ? '' : 'noosphere'), createEmptyInstance: create)
+    ..a<$core.List<$core.int>>(1, _omitFieldNames ? '' : 'id', $pb.PbFieldType.OY)
+    ..a<$core.List<$core.int>>(2, _omitFieldNames ? '' : 'share', $pb.PbFieldType.OY)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  EncryptedSecret clone() => EncryptedSecret()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  EncryptedSecret copyWith(void Function(EncryptedSecret) updates) => super.copyWith((message) => updates(message as EncryptedSecret)) as EncryptedSecret;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static EncryptedSecret create() => EncryptedSecret._();
+  EncryptedSecret createEmptyInstance() => create();
+  static $pb.PbList<EncryptedSecret> createRepeated() => $pb.PbList<EncryptedSecret>();
+  @$core.pragma('dart2js:noInline')
+  static EncryptedSecret getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<EncryptedSecret>(create);
+  static EncryptedSecret? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<$core.int> get id => $_getN(0);
+  @$pb.TagNumber(1)
+  set id($core.List<$core.int> v) { $_setBytes(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get share => $_getN(1);
+  @$pb.TagNumber(2)
+  set share($core.List<$core.int> v) { $_setBytes(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasShare() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearShare() => clearField(2);
+}
+
+class SecretShare extends $pb.GeneratedMessage {
+  factory SecretShare({
+    $core.List<$core.int>? sid,
+    $core.List<$core.int>? groupKey,
+    $core.Iterable<EncryptedSecret>? secrets,
+  }) {
+    final $result = create();
+    if (sid != null) {
+      $result.sid = sid;
+    }
+    if (groupKey != null) {
+      $result.groupKey = groupKey;
+    }
+    if (secrets != null) {
+      $result.secrets.addAll(secrets);
+    }
+    return $result;
+  }
+  SecretShare._() : super();
+  factory SecretShare.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory SecretShare.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SecretShare', package: const $pb.PackageName(_omitMessageNames ? '' : 'noosphere'), createEmptyInstance: create)
+    ..a<$core.List<$core.int>>(1, _omitFieldNames ? '' : 'sid', $pb.PbFieldType.OY)
+    ..a<$core.List<$core.int>>(2, _omitFieldNames ? '' : 'groupKey', $pb.PbFieldType.OY)
+    ..pc<EncryptedSecret>(3, _omitFieldNames ? '' : 'secrets', $pb.PbFieldType.PM, subBuilder: EncryptedSecret.create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  SecretShare clone() => SecretShare()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  SecretShare copyWith(void Function(SecretShare) updates) => super.copyWith((message) => updates(message as SecretShare)) as SecretShare;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static SecretShare create() => SecretShare._();
+  SecretShare createEmptyInstance() => create();
+  static $pb.PbList<SecretShare> createRepeated() => $pb.PbList<SecretShare>();
+  @$core.pragma('dart2js:noInline')
+  static SecretShare getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SecretShare>(create);
+  static SecretShare? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<$core.int> get sid => $_getN(0);
+  @$pb.TagNumber(1)
+  set sid($core.List<$core.int> v) { $_setBytes(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasSid() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSid() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get groupKey => $_getN(1);
+  @$pb.TagNumber(2)
+  set groupKey($core.List<$core.int> v) { $_setBytes(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasGroupKey() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearGroupKey() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.List<EncryptedSecret> get secrets => $_getList(2);
+}
+
 class Events extends $pb.GeneratedMessage {
   factory Events({
     EventType? type,

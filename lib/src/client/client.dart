@@ -1082,6 +1082,10 @@ class Client {
             ),
           );
 
+        case SecretShareEvent():
+          // TODO: Handle this case.
+          throw UnimplementedError();
+
         case KeepaliveEvent():
           // Do nothing, this is only to keep middleware happy
 

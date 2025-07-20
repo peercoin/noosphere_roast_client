@@ -6,6 +6,7 @@ import 'package:noosphere_roast_client/src/common/serial.dart';
 import 'request_interface.dart';
 import 'types/dkg_ack_request.dart';
 import 'types/dkg_encrypted_secret.dart';
+import 'types/encrypted_key_share.dart';
 import 'types/expiry.dart';
 import 'types/new_dkg_details.dart';
 import 'types/signature_round_start.dart';
@@ -323,6 +324,36 @@ class SignaturesFailureEvent extends Event {
   @override
   void write(cl.Writer writer) {
     reqId.write(writer);
+  }
+
+}
+
+/// Provided when a [sender] sends an encrypted [keyShare] for a FROST
+/// [groupKey].
+class SecretShareEvent extends Event {
+
+  final Identifier sender;
+  final EncryptedKeyShare keyShare;
+  final cl.ECCompressedPublicKey groupKey;
+
+  SecretShareEvent({
+    required this.sender,
+    required this.keyShare,
+    required this.groupKey,
+  });
+  SecretShareEvent.fromReader(cl.BytesReader reader) : this(
+    sender: reader.readIdentifier(),
+    keyShare: EncryptedKeyShare(ECCiphertext.fromReader(reader)),
+    groupKey: reader.readPubKey(),
+  );
+  SecretShareEvent.fromBytes(Uint8List bytes)
+    : this.fromReader(cl.BytesReader(bytes));
+
+  @override
+  void write(cl.Writer writer) {
+    writer.writeIdentifier(sender);
+    keyShare.ciphertext.write(writer);
+    writer.writePubKey(groupKey);
   }
 
 }
