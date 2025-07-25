@@ -53,6 +53,9 @@ class LoginCompleteResponse with cl.Writable implements Expirable {
   /// The expiry of the session. The session has to be extended before this or
   /// the session will be removed from the server.
   final Expiry expiry;
+  /// The time that the server started. Secret shares that were shared before
+  /// the start time can be resent.
+  final DateTime startTime;
   /// The participants who are currently online
   final Set<Identifier> onlineParticipants;
   /// Outstanding new DKG requests that require a commitment and all commitments
@@ -78,6 +81,7 @@ class LoginCompleteResponse with cl.Writable implements Expirable {
   LoginCompleteResponse({
     required this.id,
     required this.expiry,
+    required this.startTime,
     required this.onlineParticipants,
     required this.newDkgs,
     required this.sigRequests,
@@ -91,6 +95,7 @@ class LoginCompleteResponse with cl.Writable implements Expirable {
     : this(
       id: SessionID.fromReader(reader),
       expiry: Expiry.fromReader(reader),
+      startTime: reader.readTime(),
       onlineParticipants: reader.readIdentifierVector().toSet(),
       newDkgs: reader.readWritableVector(
         (bytes) => NewDkgEvent.fromBytes(bytes),
@@ -118,6 +123,7 @@ class LoginCompleteResponse with cl.Writable implements Expirable {
 
     id.write(writer);
     expiry.write(writer);
+    writer.writeTime(startTime);
     writer.writeIdentifierVector(onlineParticipants);
 
     for (

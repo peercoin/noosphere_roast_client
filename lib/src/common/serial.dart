@@ -28,6 +28,8 @@ extension NoosphereWriter on cl.Writer {
     li.map((el) => el.toBytes()).toList(),
   );
   void writePubKey(cl.ECCompressedPublicKey key) => writeSlice(key.data);
+  void writeTime(DateTime time)
+    => writeUInt64(BigInt.from(time.millisecondsSinceEpoch));
 
 }
 
@@ -45,5 +47,8 @@ extension NoosphereReader on cl.BytesReader {
   );
   List<T> readWritableVector<T>(T Function(Uint8List) read)
     => readVector().map(read).toList();
-  cl.ECCompressedPublicKey readPubKey() => cl.ECCompressedPublicKey(readSlice(33));
+  cl.ECCompressedPublicKey readPubKey()
+    => cl.ECCompressedPublicKey(readSlice(33));
+  DateTime readTime()
+    => DateTime.fromMillisecondsSinceEpoch(readUInt64().toInt());
 }

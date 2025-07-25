@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:coinlib/coinlib.dart' as cl;
+import 'package:noosphere_roast_client/common.dart';
 
 class Expiry with cl.Writable {
 
@@ -7,15 +8,14 @@ class Expiry with cl.Writable {
 
   Expiry(Duration ttl) : time = DateTime.now().add(ttl);
   Expiry.fromTime(this.time);
-  Expiry.fromReader(cl.BytesReader reader)
-    : time = DateTime.fromMillisecondsSinceEpoch(reader.readUInt64().toInt());
+  Expiry.fromReader(cl.BytesReader reader) : time = reader.readTime();
   Expiry.fromBytes(Uint8List bytes) : this.fromReader(cl.BytesReader(bytes));
 
   bool get isExpired => time.isBefore(DateTime.now());
 
   @override
   void write(cl.Writer writer) {
-    writer.writeUInt64(BigInt.from(time.millisecondsSinceEpoch));
+    writer.writeTime(time);
   }
 
   Duration get ttl => time.difference(DateTime.now());

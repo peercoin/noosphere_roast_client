@@ -32,7 +32,7 @@ Uint8List _bytes(List<int> li) => Uint8List.fromList(li);
 /// should be closed using [exit] to avoid hanging.
 class GrpcClientApi implements ApiRequestInterface {
 
-  static const currentProtocolVersion = 1;
+  static const currentProtocolVersion = 2;
 
   final pb.NoosphereClient _grpc;
 
