@@ -1187,6 +1187,70 @@ class SecretShare extends $pb.GeneratedMessage {
   $core.List<EncryptedSecret> get secrets => $_getList(2);
 }
 
+class ConstructedKey extends $pb.GeneratedMessage {
+  factory ConstructedKey({
+    $core.List<$core.int>? sid,
+    $core.List<$core.int>? constructedKey,
+  }) {
+    final $result = create();
+    if (sid != null) {
+      $result.sid = sid;
+    }
+    if (constructedKey != null) {
+      $result.constructedKey = constructedKey;
+    }
+    return $result;
+  }
+  ConstructedKey._() : super();
+  factory ConstructedKey.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory ConstructedKey.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'ConstructedKey', package: const $pb.PackageName(_omitMessageNames ? '' : 'noosphere'), createEmptyInstance: create)
+    ..a<$core.List<$core.int>>(1, _omitFieldNames ? '' : 'sid', $pb.PbFieldType.OY)
+    ..a<$core.List<$core.int>>(2, _omitFieldNames ? '' : 'constructedKey', $pb.PbFieldType.OY)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  ConstructedKey clone() => ConstructedKey()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  ConstructedKey copyWith(void Function(ConstructedKey) updates) => super.copyWith((message) => updates(message as ConstructedKey)) as ConstructedKey;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static ConstructedKey create() => ConstructedKey._();
+  ConstructedKey createEmptyInstance() => create();
+  static $pb.PbList<ConstructedKey> createRepeated() => $pb.PbList<ConstructedKey>();
+  @$core.pragma('dart2js:noInline')
+  static ConstructedKey getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<ConstructedKey>(create);
+  static ConstructedKey? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  $core.List<$core.int> get sid => $_getN(0);
+  @$pb.TagNumber(1)
+  set sid($core.List<$core.int> v) { $_setBytes(0, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasSid() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearSid() => clearField(1);
+
+  @$pb.TagNumber(2)
+  $core.List<$core.int> get constructedKey => $_getN(1);
+  @$pb.TagNumber(2)
+  set constructedKey($core.List<$core.int> v) { $_setBytes(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasConstructedKey() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearConstructedKey() => clearField(2);
+}
+
 class Events extends $pb.GeneratedMessage {
   factory Events({
     EventType? type,

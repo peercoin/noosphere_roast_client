@@ -13,6 +13,7 @@ import 'package:noosphere_roast_client/src/api/types/dkg_ack_request.dart';
 import 'package:noosphere_roast_client/src/api/types/dkg_encrypted_secret.dart';
 import 'package:noosphere_roast_client/src/api/types/encrypted_key_share.dart';
 import 'package:noosphere_roast_client/src/api/types/expiry.dart';
+import 'package:noosphere_roast_client/src/api/types/key_was_constructed.dart';
 import 'package:noosphere_roast_client/src/api/types/new_dkg_details.dart';
 import 'package:noosphere_roast_client/src/api/types/onetime_numbers.dart';
 import 'package:noosphere_roast_client/src/api/types/signature_reply.dart';
@@ -140,6 +141,8 @@ class GrpcClientApi implements ApiRequestInterface {
             => SignaturesFailureEvent.fromBytes(bytes),
           pb.EventType.SECRET_SHARE_EVENT
             => SecretShareEvent.fromBytes(bytes),
+          pb.EventType.CONSTRUCTED_KEY_EVENT
+            => ConstructedKeyEvent.fromBytes(bytes),
           pb.EventType.KEEPALIVE_EVENT => KeepaliveEvent(),
           _ => throw UnimplementedError(),
         };
@@ -318,12 +321,13 @@ class GrpcClientApi implements ApiRequestInterface {
   });
 
   @override
-  Future<void> shareSecretShare({
+  Future<List<ConstructedKeyEvent>> shareSecretShare({
     required SessionID sid,
     required cl.ECCompressedPublicKey groupKey,
     required Map<Identifier, EncryptedKeyShare> encryptedSecrets,
-  }) => _handleExceptions(
-    () => _grpc.shareSecretShare(
+  }) => _handleExceptions(() async {
+
+    final resp = await _grpc.shareSecretShare(
       pb.SecretShare(
         sid: sid.n,
         groupKey: groupKey.data,
@@ -333,6 +337,24 @@ class GrpcClientApi implements ApiRequestInterface {
             share: entry.value.ciphertext.toBytes(),
           ),
         ).toList(),
+      ),
+    );
+
+    return resp.data.map(
+      (bytes) => ConstructedKeyEvent.fromBytes(_bytes(bytes)),
+    ).toList();
+
+  });
+
+  @override
+  Future<void> ackKeyConstructed({
+    required SessionID sid,
+    required Signed<KeyWasConstructed> constructedKey,
+  }) => _handleExceptions(
+    () => _grpc.ackKeyConstructed(
+      pb.ConstructedKey(
+        sid: sid.n,
+        constructedKey: constructedKey.toBytes(),
       ),
     ),
   );

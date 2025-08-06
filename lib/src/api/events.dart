@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:coinlib/coinlib.dart' as cl;
 import 'package:frosty/frosty.dart';
+import 'package:noosphere_roast_client/src/api/types/key_was_constructed.dart';
 import 'package:noosphere_roast_client/src/common/errors.dart';
 import 'package:noosphere_roast_client/src/common/serial.dart';
 import 'request_interface.dart';
@@ -354,6 +355,38 @@ class SecretShareEvent extends Event {
     writer.writeIdentifier(sender);
     keyShare.ciphertext.write(writer);
     writer.writePubKey(groupKey);
+  }
+
+}
+
+/// Provided when a [participant] claims to have constructed the private key for
+/// a FROST key given by [constructedKey]. The receiver should no longer share
+/// the secret-share for this key to this [participant].
+///
+/// If a participant claims to have constructed the private key, it doesn't
+/// prove that it has.
+class ConstructedKeyEvent extends Event {
+
+  final Identifier participant;
+  final Signed<KeyWasConstructed> constructedKey;
+
+  ConstructedKeyEvent({
+    required this.participant,
+    required this.constructedKey,
+  });
+  ConstructedKeyEvent.fromReader(cl.BytesReader reader) : this(
+    participant: reader.readIdentifier(),
+    constructedKey: Signed.fromReader(
+      reader, () => KeyWasConstructed.fromReader(reader),
+    ),
+  );
+  ConstructedKeyEvent.fromBytes(Uint8List bytes)
+    : this.fromReader(cl.BytesReader(bytes));
+
+  @override
+  void write(cl.Writer writer) {
+    writer.writeIdentifier(participant);
+    constructedKey.write(writer);
   }
 
 }

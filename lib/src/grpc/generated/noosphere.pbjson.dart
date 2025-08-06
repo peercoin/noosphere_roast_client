@@ -46,6 +46,7 @@ const EventType$json = {
     {'1': 'SIG_FAILURE_EVENT', '2': 10},
     {'1': 'KEEPALIVE_EVENT', '2': 11},
     {'1': 'SECRET_SHARE_EVENT', '2': 12},
+    {'1': 'CONSTRUCTED_KEY_EVENT', '2': 13},
   ],
 };
 
@@ -56,7 +57,8 @@ final $typed_data.Uint8List eventTypeDescriptor = $convert.base64Decode(
     'FkRLR19ST1VORDJfU0hBUkVfRVZFTlQQBBIRCg1ES0dfQUNLX0VWRU5UEAUSGQoVREtHX0FDS1'
     '9SRVFVRVNUX0VWRU5UEAYSEQoNU0lHX1JFUV9FVkVOVBAHEhgKFFNJR19ORVdfUk9VTkRTX0VW'
     'RU5UEAgSFgoSU0lHX0NPTVBMRVRFX0VWRU5UEAkSFQoRU0lHX0ZBSUxVUkVfRVZFTlQQChITCg'
-    '9LRUVQQUxJVkVfRVZFTlQQCxIWChJTRUNSRVRfU0hBUkVfRVZFTlQQDA==');
+    '9LRUVQQUxJVkVfRVZFTlQQCxIWChJTRUNSRVRfU0hBUkVfRVZFTlQQDBIZChVDT05TVFJVQ1RF'
+    'RF9LRVlfRVZFTlQQDQ==');
 
 @$core.Deprecated('Use bytesDescriptor instead')
 const Bytes$json = {
@@ -310,6 +312,20 @@ final $typed_data.Uint8List secretShareDescriptor = $convert.base64Decode(
     'CgtTZWNyZXRTaGFyZRIQCgNzaWQYASABKAxSA3NpZBIbCglncm91cF9rZXkYAiABKAxSCGdyb3'
     'VwS2V5EjQKB3NlY3JldHMYAyADKAsyGi5ub29zcGhlcmUuRW5jcnlwdGVkU2VjcmV0UgdzZWNy'
     'ZXRz');
+
+@$core.Deprecated('Use constructedKeyDescriptor instead')
+const ConstructedKey$json = {
+  '1': 'ConstructedKey',
+  '2': [
+    {'1': 'sid', '3': 1, '4': 1, '5': 12, '10': 'sid'},
+    {'1': 'constructed_key', '3': 2, '4': 1, '5': 12, '10': 'constructedKey'},
+  ],
+};
+
+/// Descriptor for `ConstructedKey`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List constructedKeyDescriptor = $convert.base64Decode(
+    'Cg5Db25zdHJ1Y3RlZEtleRIQCgNzaWQYASABKAxSA3NpZBInCg9jb25zdHJ1Y3RlZF9rZXkYAi'
+    'ABKAxSDmNvbnN0cnVjdGVkS2V5');
 
 @$core.Deprecated('Use eventsDescriptor instead')
 const Events$json = {

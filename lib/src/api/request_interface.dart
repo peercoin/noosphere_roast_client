@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:coinlib/coinlib.dart' as cl;
 import 'package:frosty/frosty.dart';
+import 'package:noosphere_roast_client/src/api/types/key_was_constructed.dart';
 import 'events.dart';
 import 'responses/login_complete.dart';
 import 'responses/expirable_auth_challenge.dart';
@@ -65,6 +66,10 @@ class InvalidRequest implements Exception {
   InvalidRequest.missingShare() : this("Missing share for ROAST round");
   InvalidRequest.invalidShare() : this("Signature share is invalid");
   InvalidRequest.invalidKeyShareMap() : this("Encrypted key shares are invalid");
+  InvalidRequest.invalidKeyConstructedSig()
+    : this("Constructed key acknowledgement signature invalid");
+  InvalidRequest.haveKeyConstructedAck()
+    : this("Already have received acknowledgement of constructed key");
   @override
   String toString() => message;
 }
@@ -203,10 +208,28 @@ abstract interface class ApiRequestInterface {
   ///
   /// Logged in recipients will receive a [SecretShareEvent] immediately.
   /// Otherwise, the server shall send the event when the receipients login.
-  Future<void> shareSecretShare({
+  ///
+  /// A list of [ConstructedKeyEvent]s for all recipients that have already
+  /// constructed the private key will be returned. The sender doesn't need to
+  /// resend secrets to them unless requested by some mechanism outside of the
+  /// scope of this library.
+  Future<List<ConstructedKeyEvent>> shareSecretShare({
     required SessionID sid,
     required cl.ECCompressedPublicKey groupKey,
     required Map<Identifier, EncryptedKeyShare> encryptedSecrets,
+  });
+
+  /// Share that the private key for the [constructedKey] was constructed so
+  /// that the server will stop sending secret shares.
+  ///
+  /// This must only be sent once after the key was constructed or again if
+  /// the server provides further shares for the key which may happen after the
+  /// server is shutdown and started again.
+  ///
+  /// Other participants will receive [ConstructedKeyEvent]s.
+  Future<void> ackKeyConstructed({
+    required SessionID sid,
+    required Signed<KeyWasConstructed> constructedKey,
   });
 
 }

@@ -1086,6 +1086,10 @@ class Client {
           // TODO: Handle this case.
           throw UnimplementedError();
 
+        case ConstructedKeyEvent():
+          // TODO: Handle this case.
+          throw UnimplementedError();
+
         case KeepaliveEvent():
           // Do nothing, this is only to keep middleware happy
 

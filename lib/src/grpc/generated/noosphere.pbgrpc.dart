@@ -73,9 +73,13 @@ class NoosphereClient extends $grpc.Client {
       '/noosphere.Noosphere/SubmitSignatureReplies',
       ($0.SignaturesReplies value) => value.writeToBuffer(),
       ($core.List<$core.int> value) => $0.SignaturesResponse.fromBuffer(value));
-  static final _$shareSecretShare = $grpc.ClientMethod<$0.SecretShare, $0.Empty>(
+  static final _$shareSecretShare = $grpc.ClientMethod<$0.SecretShare, $0.RepeatedBytes>(
       '/noosphere.Noosphere/ShareSecretShare',
       ($0.SecretShare value) => value.writeToBuffer(),
+      ($core.List<$core.int> value) => $0.RepeatedBytes.fromBuffer(value));
+  static final _$ackKeyConstructed = $grpc.ClientMethod<$0.ConstructedKey, $0.Empty>(
+      '/noosphere.Noosphere/AckKeyConstructed',
+      ($0.ConstructedKey value) => value.writeToBuffer(),
       ($core.List<$core.int> value) => $0.Empty.fromBuffer(value));
 
   NoosphereClient($grpc.ClientChannel channel,
@@ -136,8 +140,12 @@ class NoosphereClient extends $grpc.Client {
     return $createUnaryCall(_$submitSignatureReplies, request, options: options);
   }
 
-  $grpc.ResponseFuture<$0.Empty> shareSecretShare($0.SecretShare request, {$grpc.CallOptions? options}) {
+  $grpc.ResponseFuture<$0.RepeatedBytes> shareSecretShare($0.SecretShare request, {$grpc.CallOptions? options}) {
     return $createUnaryCall(_$shareSecretShare, request, options: options);
+  }
+
+  $grpc.ResponseFuture<$0.Empty> ackKeyConstructed($0.ConstructedKey request, {$grpc.CallOptions? options}) {
+    return $createUnaryCall(_$ackKeyConstructed, request, options: options);
   }
 }
 
@@ -237,12 +245,19 @@ abstract class NoosphereServiceBase extends $grpc.Service {
         false,
         ($core.List<$core.int> value) => $0.SignaturesReplies.fromBuffer(value),
         ($0.SignaturesResponse value) => value.writeToBuffer()));
-    $addMethod($grpc.ServiceMethod<$0.SecretShare, $0.Empty>(
+    $addMethod($grpc.ServiceMethod<$0.SecretShare, $0.RepeatedBytes>(
         'ShareSecretShare',
         shareSecretShare_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $0.SecretShare.fromBuffer(value),
+        ($0.RepeatedBytes value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.ConstructedKey, $0.Empty>(
+        'AckKeyConstructed',
+        ackKeyConstructed_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.ConstructedKey.fromBuffer(value),
         ($0.Empty value) => value.writeToBuffer()));
   }
 
@@ -298,8 +313,12 @@ abstract class NoosphereServiceBase extends $grpc.Service {
     return submitSignatureReplies(call, await request);
   }
 
-  $async.Future<$0.Empty> shareSecretShare_Pre($grpc.ServiceCall call, $async.Future<$0.SecretShare> request) async {
+  $async.Future<$0.RepeatedBytes> shareSecretShare_Pre($grpc.ServiceCall call, $async.Future<$0.SecretShare> request) async {
     return shareSecretShare(call, await request);
+  }
+
+  $async.Future<$0.Empty> ackKeyConstructed_Pre($grpc.ServiceCall call, $async.Future<$0.ConstructedKey> request) async {
+    return ackKeyConstructed(call, await request);
   }
 
   $async.Future<$0.Bytes> login($grpc.ServiceCall call, $0.LoginRequest request);
@@ -315,5 +334,6 @@ abstract class NoosphereServiceBase extends $grpc.Service {
   $async.Future<$0.Empty> requestSignatures($grpc.ServiceCall call, $0.SignaturesRequest request);
   $async.Future<$0.Empty> rejectSignaturesRequest($grpc.ServiceCall call, $0.SignaturesRejection request);
   $async.Future<$0.SignaturesResponse> submitSignatureReplies($grpc.ServiceCall call, $0.SignaturesReplies request);
-  $async.Future<$0.Empty> shareSecretShare($grpc.ServiceCall call, $0.SecretShare request);
+  $async.Future<$0.RepeatedBytes> shareSecretShare($grpc.ServiceCall call, $0.SecretShare request);
+  $async.Future<$0.Empty> ackKeyConstructed($grpc.ServiceCall call, $0.ConstructedKey request);
 }

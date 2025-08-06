@@ -10,6 +10,7 @@ export "api/types/dkg_encrypted_secret.dart";
 export "api/types/encrypted_key_share.dart";
 export "api/types/expirable.dart";
 export "api/types/expiry.dart";
+export "api/types/key_was_constructed.dart";
 export "api/types/new_dkg_details.dart";
 export "api/types/onetime_numbers.dart";
 export "api/types/signature_metadata.dart";
