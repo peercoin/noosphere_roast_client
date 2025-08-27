@@ -17,6 +17,9 @@ with a coordinator server over gRPC.
 The server and the `Client` class tests are not included under this repository.
 The `Client` class integration with the server is tested elsewhere.
 
+This library currently has little to no DoS protection and should be used at the
+consumer's risk.
+
 ## Installation
 
 To use the library, the underlying [frosty](https://pub.dev/packages/frosty)

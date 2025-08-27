@@ -9,6 +9,7 @@ import 'map_serial.dart';
 /// The reason the private key is being requested
 enum KeyPurpose {
   login, dkgDetails, dkgPart2, decryptDkgSecret, signAck, signaturesDetails,
+  secretShare, decryptSecretShare,
 }
 
 class ClientConfig with cl.Writable, MapWritable {

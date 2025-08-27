@@ -17,12 +17,10 @@ class SignaturesNonces implements Expirable {
 /// information.
 abstract interface class ClientStorageInterface {
 
-  /// Add new key with details to storage
-  Future<void> addNewFrostKey(FrostKeyWithDetails newKey);
-
-  /// Adds the acknowledgement of a FROST key for a participant, including for
-  /// self. May update an existing ACK
-  Future<void> addOrReplaceAck(SignedDkgAck ack);
+  /// Add or replace the key with details to the storage. If the
+  /// [FrostKeyWithDetails.groupKey] is the same as an existing key, it must be
+  /// replaced with the new details.
+  Future<void> addOrReplaceFrostKey(FrostKeyWithDetails newKey);
 
   /// Stores the nonces for the presignatures of a request given by [id]. Each
   /// nonce is mapped by the signature index in the request.

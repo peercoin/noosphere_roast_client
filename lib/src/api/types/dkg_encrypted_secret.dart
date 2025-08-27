@@ -19,16 +19,23 @@ class DkgEncryptedSecret {
   );
 
   /// Decrypts the [DkgShareToGive] or returns null if it cannot be decrypted
-  /// and authenticated.
+  /// and authenticated as a valid [DkgShareToGive].
   DkgShareToGive? decrypt({
     required cl.ECPrivateKey recipientKey,
     required cl.ECPublicKey senderKey,
   }) {
+
     final plaintext = ciphertext.decrypt(
       recipientKey: recipientKey,
       senderKey: senderKey,
     );
-    return plaintext == null ? null : DkgShareToGive.fromBytes(plaintext);
+
+    try {
+      return plaintext == null ? null : DkgShareToGive.fromBytes(plaintext);
+    } on InvalidShareToGive {
+      return null;
+    }
+
   }
 
 }

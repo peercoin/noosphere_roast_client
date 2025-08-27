@@ -28,29 +28,9 @@ class ClientCachedStorage {
       ExpirableMap.of(await store.loadRejectedSigsRequests()),
     );
 
-  Future<void> addNewFrostKey(FrostKeyWithDetails newKey) async {
-    await _underlying.addNewFrostKey(newKey);
-    keys[newKey.groupKey] = newKey;
-  }
-
-  Future<void> addOrReplaceAck(SignedDkgAck ack) async {
-
-    final groupKey = ack.signed.obj.groupKey;
-    final key = keys[groupKey];
-    if (key == null) return;
-
-    await _underlying.addOrReplaceAck(ack);
-
-    keys[groupKey] = FrostKeyWithDetails(
-      keyInfo: key.keyInfo,
-      name: key.name,
-      description: key.description,
-      acks: {
-        ...key.acks.where((existing) => existing != ack),
-        ack,
-      },
-    );
-
+  Future<void> addOrReplaceFrostKey(FrostKeyWithDetails key) async {
+    await _underlying.addOrReplaceFrostKey(key);
+    keys[key.groupKey] = key;
   }
 
   Set<SignedDkgAck> getAcksForRequest(DkgAckRequest request)
@@ -71,7 +51,6 @@ class ClientCachedStorage {
     // Create DkgAckRequests for IDs and group key
     .map((tuple) => DkgAckRequest(ids: tuple.$1, groupPublicKey: tuple.$2))
     .toSet();
-
 
   Future<void> addSignaturesNonces({
     required SignaturesRequestId id,

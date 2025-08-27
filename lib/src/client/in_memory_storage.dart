@@ -3,7 +3,6 @@ import 'package:coinlib/coinlib.dart' as cl;
 import 'package:collection/collection.dart';
 import 'package:noosphere_roast_client/src/api/types/expirable.dart';
 import 'package:noosphere_roast_client/src/api/types/signatures_request_details.dart';
-import 'package:noosphere_roast_client/src/api/types/signed_dkg_ack.dart';
 import 'package:noosphere_roast_client/src/client/storage_interface.dart';
 import 'frost_key_with_details.dart';
 
@@ -37,29 +36,9 @@ class InMemoryClientStorage implements ClientStorageInterface {
   }
 
   @override
-  Future<void> addNewFrostKey(FrostKeyWithDetails newKey) async {
+  Future<void> addOrReplaceFrostKey(FrostKeyWithDetails newKey) async {
     keys[newKey.groupKey] = newKey;
     _maybeCompleteKey(newKey);
-  }
-
-  @override
-  Future<void> addOrReplaceAck(SignedDkgAck ack) async {
-
-    final groupKey = ack.signed.obj.groupKey;
-    final key = keys[groupKey]!;
-
-    final newKey = keys[groupKey] = FrostKeyWithDetails(
-      keyInfo: key.keyInfo,
-      name: key.name,
-      description: key.description,
-      acks: {
-        ...key.acks.where((existing) => existing != ack),
-        ack,
-      },
-    );
-
-    _maybeCompleteKey(newKey);
-
   }
 
   @override

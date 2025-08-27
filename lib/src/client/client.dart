@@ -7,7 +7,9 @@ import 'package:noosphere_roast_client/src/api/responses/signatures.dart';
 import 'package:noosphere_roast_client/src/api/types/dkg_ack.dart';
 import 'package:noosphere_roast_client/src/api/types/dkg_ack_request.dart';
 import 'package:noosphere_roast_client/src/api/types/dkg_encrypted_secret.dart';
+import 'package:noosphere_roast_client/src/api/types/encrypted_key_share.dart';
 import 'package:noosphere_roast_client/src/api/types/expiry.dart';
+import 'package:noosphere_roast_client/src/api/types/key_was_constructed.dart';
 import 'package:noosphere_roast_client/src/api/types/new_dkg_details.dart';
 import 'package:noosphere_roast_client/src/api/types/onetime_numbers.dart';
 import 'package:noosphere_roast_client/src/api/types/signature_reply.dart';
@@ -24,6 +26,7 @@ import 'package:noosphere_roast_client/src/config/client.dart';
 import 'package:frosty/frosty.dart';
 import 'package:synchronized/extension.dart';
 import 'events.dart';
+import 'key_construction.dart';
 import 'signatures_request.dart';
 import 'storage_interface.dart';
 import 'state/state.dart';
@@ -115,6 +118,8 @@ class Client {
   final _sigReqLock = Object();
   final _dkgReqLock = Object();
   final _dkgAckLock = Object();
+  // Used as persistent locks for each key, even when the key object changes
+  final _keyLocks = <cl.ECCompressedPublicKey, Object>{};
 
   static cl.ECPublicKey _getParticipantPubkeyForId(
     ClientConfig config, Identifier id,
@@ -128,6 +133,11 @@ class Client {
     if (!config.allIds.containsAll(ids)) {
       throw ServerMisbehaviour.noParticipant();
     }
+  }
+
+  static void _checkOtherParticipantId(ClientConfig config, Identifier id) {
+    _getParticipantPubkeyForId(config, id);
+    if (id == config.id) throw ServerMisbehaviour.wrongParticipant();
   }
 
   static Set<Identifier> _idsFromCommitments(DkgCommitmentList commitments) {
@@ -291,17 +301,25 @@ class Client {
 
   }
 
+  Future<void> _runKeyDetailsSyncIfExists(
+    cl.ECCompressedPublicKey groupKey,
+    FutureOr<void> Function(FrostKeyWithDetails) criticalSection,
+  ) async {
+
+    if (!keys.containsKey(groupKey)) return;
+    final lock = _keyLocks.putIfAbsent(groupKey, () => Object());
+
+    await lock.synchronized(() async {
+      final key = keys[groupKey];
+      if (key == null) return;
+      await criticalSection(key);
+    });
+
+  }
+
   bool _dkgIsAccepted(ClientDkgState dkg)
     => dkg.round is! ClientDkgRound1State
     || dkg.round1.commitments.any((c) => c.$1 == config.id);
-
-  void _checkParticipantId(Identifier id)
-    => _getParticipantPubkeyForId(config, id);
-
-  void _checkOtherParticipantId(Identifier id) {
-    _checkParticipantId(id);
-    if (id == config.id) throw ServerMisbehaviour.wrongParticipant();
-  }
 
   void _disconnect() async {
     await logout();
@@ -418,16 +436,17 @@ class Client {
         culprit: null,
         fault: DkgFault.secret,
       );
+      return;
     }
 
     // Store new FROST key
-    final newKey = FrostKeyWithDetails(
-      keyInfo: keyInfo,
-      name: dkg.details.name,
-      description: dkg.details.description,
-      acks: {},
+    await _store.addOrReplaceFrostKey(
+      FrostKeyWithDetails(
+        keyInfo: keyInfo,
+        name: dkg.details.name,
+        description: dkg.details.description,
+      ),
     );
-    await _store.addNewFrostKey(newKey);
 
     // Remove DKG which is complete
     _state.nameToDkg.remove(dkg.details.name);
@@ -456,7 +475,12 @@ class Client {
     );
 
     // Store if we are accepting (and therefore have) the key
-    if (accept) await _store.addOrReplaceAck(ack);
+    final key = keys[groupKey];
+    if (accept && key != null) {
+      await _store.addOrReplaceFrostKey(
+        keys[groupKey]!.addOrReplaceAck(ack),
+      );
+    }
 
     return ack;
 
@@ -464,14 +488,20 @@ class Client {
 
   Future<void> _verifyAndAddAck(SignedDkgAck ack) async {
 
-    // Ignore keys we do not have
-    if (!_store.keys.containsKey(ack.signed.obj.groupKey)) return;
+    _checkOtherParticipantId(config, ack.signer);
 
-    _checkOtherParticipantId(ack.signer);
-    _checkSigned(config, ack.signed, ack.signer);
+    await _runKeyDetailsSyncIfExists(
+      ack.signed.obj.groupKey,
+      (key) async {
 
-    // Add/Update ACK for key
-    await _store.addOrReplaceAck(ack);
+        // Only do the expensive signature check if we have the key
+        _checkSigned(config, ack.signed, ack.signer);
+
+        // Add/Update ACK for key
+        await _store.addOrReplaceFrostKey(key.addOrReplaceAck(ack));
+
+      }
+    );
 
   }
 
@@ -818,6 +848,85 @@ class Client {
     await _store.addRejectedSigsRequest(id, sigsState.expiry);
   }
 
+  Future<void> _processSecretSharing(
+    FrostKeyWithDetails key,
+    Set<Identifier> sendTo,
+  ) async {
+
+    // Do not send to those who have claimed to have constructed the key already
+    sendTo = sendTo.where((id) => !key.claimedToHave.contains(id)).toSet();
+    if (sendTo.isEmpty) return;
+
+    final ourKey = await getPrivateKey(KeyPurpose.secretShare);
+    final shareTime = DateTime.now();
+
+    await api.shareSecretShare(
+      sid: _state.sessionID,
+      groupKey: key.groupKey,
+      encryptedSecrets: {
+        for (final id in sendTo)
+          id: EncryptedKeyShare.encrypt(
+            keyShare: key.keyInfo.private.share,
+            recipientKey: _getParticipantPubkeyForId(config, id),
+            senderKey: ourKey,
+          ),
+      },
+    );
+
+    await _store.addOrReplaceFrostKey(
+      key.addOrReplaceSecretShareTimes(sendTo, shareTime),
+    );
+
+  }
+
+  Future<void> _processSecretShareEvent(
+    SecretShareEvent ev,
+    { bool sendClientEvent = false, }
+  ) => _runKeyDetailsSyncIfExists(
+    ev.groupKey,
+    (keyDetails) async {
+
+      final sender = ev.sender;
+
+      // Do not process if we have this secret or the constructed key
+      if (keyDetails.keyConstruction.haveForParticipant(sender)) return;
+
+      // Decrypt secret share and check against public share
+      final key = await getPrivateKey(KeyPurpose.decryptSecretShare);
+      final secret = ev.keyShare.decrypt(
+        recipientKey: key,
+        senderKey: _getParticipantPubkeyForId(config, sender),
+      );
+
+      // If the secret was invalid then the participant is misbehaving
+      // This is an example of where DoS protection is needed.
+      if (secret == null) return;
+
+      // Add secret to storage if it correctly belongs to the key
+      final newDetails = keyDetails.addSecretShare(sender, secret);
+      if (newDetails == null) return;
+      await _store.addOrReplaceFrostKey(newDetails);
+
+      if (sendClientEvent) {
+        _sendEvent(
+          SecretShareClientEvent(keyDetails: newDetails, sender: sender),
+        );
+      }
+
+      // If completed, let server know
+      if (newDetails.keyConstruction is KeyConstructionComplete) {
+        await api.ackKeyConstructed(
+          sid: _state.sessionID,
+          constructedKey: Signed.sign(
+            obj: KeyWasConstructed(ev.groupKey),
+            key: key,
+          ),
+        );
+      }
+
+    },
+  );
+
   Future<void> _handleEvent(Event ev) async {
 
     // After logout, the session shall be expired and no more events can be
@@ -829,7 +938,7 @@ class Client {
 
         case ParticipantStatusEvent():
 
-          _checkOtherParticipantId(ev.id);
+          _checkOtherParticipantId(config, ev.id);
 
           if (!ev.loggedIn) {
 
@@ -867,7 +976,7 @@ class Client {
 
         case NewDkgEvent():
 
-          _checkOtherParticipantId(ev.creator);
+          _checkOtherParticipantId(config, ev.creator);
           _checkNewDkg(config, ev);
 
           final details = ev.details.obj;
@@ -894,7 +1003,7 @@ class Client {
 
         case DkgRejectEvent():
 
-          _checkOtherParticipantId(ev.participant);
+          _checkOtherParticipantId(config, ev.participant);
 
           await _runDkgSyncIfExists(ev.name, (dkg) {
             _state.nameToDkg.remove(ev.name);
@@ -907,7 +1016,7 @@ class Client {
 
         case DkgCommitmentEvent():
 
-          _checkOtherParticipantId(ev.participant);
+          _checkOtherParticipantId(config, ev.participant);
 
           await _runDkgSyncIfExists(ev.name, (dkg) async {
 
@@ -933,7 +1042,7 @@ class Client {
 
         case DkgRound2ShareEvent():
 
-          _checkOtherParticipantId(ev.sender);
+          _checkOtherParticipantId(config, ev.sender);
 
           // Synchronise with ACKs to ensure the key is processed before
           // processing ACKs for it
@@ -996,7 +1105,13 @@ class Client {
 
         case DkgAckEvent():
           await _dkgAckLock.synchronized(
-            () => Future.wait(ev.acks.map((ack) => _verifyAndAddAck(ack))),
+            () async {
+              // Process in series to ensure storage is updated correctly
+              // for each ACK
+              for (final ack in ev.acks) {
+                await _verifyAndAddAck(ack);
+              }
+            },
           );
 
         case DkgAckRequestEvent():
@@ -1029,7 +1144,7 @@ class Client {
         case SignaturesRequestEvent():
           await _sigReqLock.synchronized(() async {
 
-            _checkOtherParticipantId(ev.creator);
+            _checkOtherParticipantId(config, ev.creator);
             _checkDetailsEvent(config, ev);
             if (_sigReqExists(ev.details.obj.id)) {
               throw ServerMisbehaviour.duplicateSigsReq();
@@ -1083,12 +1198,21 @@ class Client {
           );
 
         case SecretShareEvent():
-          // TODO: Handle this case.
-          throw UnimplementedError();
+          _checkOtherParticipantId(config, ev.sender);
+          await _processSecretShareEvent(ev, sendClientEvent: true);
 
         case ConstructedKeyEvent():
-          // TODO: Handle this case.
-          throw UnimplementedError();
+          _checkOtherParticipantId(config, ev.participant);
+          _checkSigned(config, ev.constructedKey, ev.participant);
+
+          await _runKeyDetailsSyncIfExists(
+            ev.constructedKey.obj.publicKey,
+            (keyDetails) async {
+              await _store.addOrReplaceFrostKey(
+                keyDetails.addClaimedToHave(ev.participant),
+              );
+            }
+          );
 
         case KeepaliveEvent():
           // Do nothing, this is only to keep middleware happy
@@ -1206,6 +1330,11 @@ class Client {
       _checkSigned(config, completedSig.details, completedSig.creator);
     }
 
+    // Check secret share events
+    for (final secretShare in resp2.secretShares) {
+      _checkOtherParticipantId(config, secretShare.sender);
+    }
+
     final client = Client._(
       config: config,
       api: api,
@@ -1266,6 +1395,25 @@ class Client {
         client._sendError(e);
       }
     }();
+
+    // Resend secrets sent before the server start time
+    for (final key in client.keys.values) {
+
+      final toResend = {
+        for (
+          final MapEntry(key: id, value: time)
+          in key.secretShareTimes.entries
+        ) if (time.isBefore(resp2.startTime)) id,
+      };
+
+      await client._processSecretSharing(key, toResend);
+
+    }
+
+    // Process secret shares
+    for (final secret in resp2.secretShares) {
+      await client._processSecretShareEvent(secret);
+    }
 
     return client;
 
@@ -1426,6 +1574,50 @@ class Client {
       await _continueSigning(sigsState);
     },
   );
+
+  /// This method is dangerous. Only use this to reveal the private key for the
+  /// FROST key with other participants.
+  ///
+  /// Shares the secret for the FROST key given by [groupKey]. If [toWhom] is
+  /// omitted, it will be shared with all, otherwise it will only be shared with
+  /// the participants provided.
+  ///
+  /// Once a participant has obtained a threshold of secret shares, it can
+  /// construct the underlying private key for the FROST key.
+  /// [SecretShareClientEvent] will be provided after processing a secret share.
+  ///
+  /// Secrets are shared with end-to-end encryption so the server will not be
+  /// able to construct the key.
+  Future<void> shareKeySecret(
+    cl.ECCompressedPublicKey groupKey,
+    { Set<Identifier>? toWhom, }
+  ) async {
+
+    final toWhomFinal = toWhom ?? config.otherIds;
+
+    if (!keys.containsKey(groupKey)) {
+      throw ArgumentError.value(groupKey, "groupKey", "doesn't exist");
+    }
+    if (!config.otherIds.containsAll(toWhomFinal)) {
+      throw ArgumentError.value(
+        toWhom,
+        "toWhom",
+        "has non-existing identifier",
+      );
+    }
+
+    await _runKeyDetailsSyncIfExists(groupKey, (keyDetails) async {
+
+      // Share with those we haven't shared with before
+      final needToShare = toWhomFinal.where(
+        (id) => !keyDetails.secretShareTimes.containsKey(id),
+      ).toSet();
+
+      await _processSecretSharing(keyDetails, needToShare);
+
+    });
+
+  }
 
   /// Stops further activity of the client and waits for existing events to
   /// finish processing before completing.

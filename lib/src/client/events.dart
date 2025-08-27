@@ -1,9 +1,11 @@
 import 'package:coinlib/coinlib.dart' as cl;
+import 'package:frosty/frosty.dart';
 import 'package:noosphere_roast_client/src/api/types/new_dkg_details.dart';
 import 'package:noosphere_roast_client/src/api/types/signatures_request_details.dart';
-import 'package:noosphere_roast_client/src/client/dkg_in_progress.dart';
-import 'package:frosty/frosty.dart';
+import 'dkg_in_progress.dart';
+import 'key_construction.dart';
 import 'client.dart';
+import 'frost_key_with_details.dart';
 import 'signatures_request.dart';
 
 enum DkgFault {
@@ -87,4 +89,21 @@ class SignaturesCompleteClientEvent extends ClientEvent {
     required this.creator,
     required this.signatures,
   });
+}
+
+/// Provided when a key has received a secret share from another participant.
+/// The [keyDetails] will have an updated [KeyConstruction]
+/// [FrostKeyWithDetails.keyConstruction] field. If this is
+/// [KeyConstructionComplete], then the underlying private key will be provided.
+class SecretShareClientEvent extends ClientEvent {
+
+  final FrostKeyWithDetails keyDetails;
+  /// Who sent the latest secret added to the key details
+  final Identifier sender;
+
+  SecretShareClientEvent({
+    required this.keyDetails,
+    required this.sender,
+  });
+
 }

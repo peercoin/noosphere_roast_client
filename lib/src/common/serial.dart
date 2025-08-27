@@ -28,12 +28,26 @@ extension NoosphereWriter on cl.Writer {
     li.map((el) => el.toBytes()).toList(),
   );
   void writePubKey(cl.ECCompressedPublicKey key) => writeSlice(key.data);
+  void writePrivKey(cl.ECPrivateKey key) => writeSlice(key.data);
   void writeTime(DateTime time)
     => writeUInt64(BigInt.from(time.millisecondsSinceEpoch));
+
+  void writeMap<K, V>(
+    Map<K, V> map,
+    void Function(K) writeKey,
+    void Function(V) writeValue,
+  ) {
+    writeUInt16(map.length);
+    for (final entry in map.entries) {
+      writeKey(entry.key);
+      writeValue(entry.value);
+    }
+  }
 
 }
 
 extension NoosphereReader on cl.BytesReader {
+
   String readString() => utf8.decoder.convert(readVarSlice());
   bool readBool() => readUInt8() == 1;
   Duration readDuration() => Duration(microseconds: readUInt64().toInt());
@@ -49,6 +63,13 @@ extension NoosphereReader on cl.BytesReader {
     => readVector().map(read).toList();
   cl.ECCompressedPublicKey readPubKey()
     => cl.ECCompressedPublicKey(readSlice(33));
+  cl.ECPrivateKey readPrivKey() => cl.ECPrivateKey(readSlice(32));
   DateTime readTime()
     => DateTime.fromMillisecondsSinceEpoch(readUInt64().toInt());
+
+  Map<K, V> readMap<K, V>(K Function() readKey, V Function() readValue)
+    => Map.fromEntries(
+      Iterable.generate(readUInt16(), (_) => MapEntry(readKey(), readValue())),
+    );
+
 }
