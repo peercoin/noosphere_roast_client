@@ -7,6 +7,8 @@ threshold signatures using coordinated Distributed Key Generation and ROAST.
 This allows generation of one or more m-of-n threshold keys for a group of
 participants given by a `GroupConfig`. Clients can request new DKGs or
 signatures from the group, and may accept or reject requests made by others.
+Clients can also construct the underlying private keys of a FROST key by sharing
+their secret shares using E2E encryption.
 
 Consumers of the library should usually use the high-level `Client` class. The
 `login()` method allows a client to login with a given `ClientConfig` and
