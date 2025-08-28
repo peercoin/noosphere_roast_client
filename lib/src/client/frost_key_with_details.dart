@@ -54,30 +54,50 @@ class FrostKeyWithDetails with cl.Writable {
     keyConstruction: KeyConstructionProgress(),
   );
 
+  /// This will read data from before version 3.0.0 if there is no additional
+  /// trailing data.
   factory FrostKeyWithDetails.fromReader(cl.BytesReader reader) {
 
     final keyInfo = ParticipantKeyInfo.fromReader(reader);
+    final name = reader.readString();
+    final description = reader.readString();
+
+    // Reuse the group key that was already read to keyInfo
+    final acks = Iterable.generate(
+      reader.readUInt16(),
+      (_) => SignedDkgAck(
+        signer: reader.readIdentifier(),
+        signed: Signed(
+          obj: DkgAck(
+            groupKey: keyInfo.groupKey,
+            accepted: reader.readBool(),
+          ),
+          signature: reader.readSignature(),
+        ),
+      ),
+    ).toSet();
+
+    if (reader.atEnd) {
+      // Old data, add empty defaults
+      return FrostKeyWithDetails._(
+        keyInfo: keyInfo,
+        name: name,
+        description: description,
+        acks: acks,
+        secretShareTimes: {},
+        claimedToHave: {},
+        keyConstruction: KeyConstructionProgress(),
+      );
+    }
+
+    // Fields added in v3.0.0
 
     return FrostKeyWithDetails._(
 
       keyInfo: keyInfo,
-      name: reader.readString(),
-      description: reader.readString(),
-
-      // Read ACKs, reusing the group key that was already read to keyInfo
-      acks: Iterable.generate(
-        reader.readUInt16(),
-        (_) => SignedDkgAck(
-          signer: reader.readIdentifier(),
-          signed: Signed(
-            obj: DkgAck(
-              groupKey: keyInfo.groupKey,
-              accepted: reader.readBool(),
-            ),
-            signature: reader.readSignature(),
-          ),
-        ),
-      ).toSet(),
+      name: name,
+      description: description,
+      acks: acks,
 
       secretShareTimes: reader.readMap(
         () => reader.readIdentifier(),
@@ -95,6 +115,8 @@ class FrostKeyWithDetails with cl.Writable {
   }
 
   /// Convenience constructor to construct from serialised [bytes].
+  /// This will read data from before version 3.0.0 if there is no additional
+  /// trailing data.
   factory FrostKeyWithDetails.fromBytes(Uint8List bytes)
     => FrostKeyWithDetails.fromReader(cl.BytesReader(bytes));
 
